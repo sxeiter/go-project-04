@@ -15,8 +15,8 @@ func WriteFile(content string, name string) {
 		color.Red("Ошибка")
 	}
 	_, err = file.WriteString(content)
+	defer file.Close()
 	if err != nil {
-		file.Close()
 		color.Red(err.Error())
 		return
 	}
