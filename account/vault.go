@@ -1,7 +1,6 @@
 package account
 
 import (
-	"demo/password/files"
 	"encoding/json"
 	"strings"
 	"time"
@@ -9,29 +8,52 @@ import (
 	"github.com/fatih/color"
 )
 
+type Db interface {
+	Read() ([]byte, error)
+	Write([]byte)
+}
+
 type Vault struct {
 	Accounts  []Account `json:"accounts"`
 	UpdatedAt time.Time
 }
 
-func NewVault() *Vault {
-	file, err := files.ReadFile("data.json")
+type VaultWithDb struct {
+	Vault
+	db Db
+}
+
+func NewVault(db Db) *VaultWithDb {
+	file, err := db.Read()
 	if err != nil {
 		color.Red("Не удалось разобрать файл data.json")
-		return &Vault{
-			Accounts:  []Account{},
-			UpdatedAt: time.Now(),
+		return &VaultWithDb{
+			Vault: Vault{
+				Accounts:  []Account{},
+				UpdatedAt: time.Now(),
+			},
+			db: db,
 		}
 	}
 	var vault Vault
 	err = json.Unmarshal(file, &vault)
 	if err != nil {
 		color.Red(err.Error())
+		return &VaultWithDb{
+			Vault: Vault{
+				Accounts:  []Account{},
+				UpdatedAt: time.Now(),
+			},
+			db: db,
+		}
 	}
-	return &vault
+	return &VaultWithDb{
+		Vault: vault,
+		db:    db,
+	}
 }
 
-func (vault *Vault) DeleteAccountByUrl(url string) bool {
+func (vault *VaultWithDb) DeleteAccountByUrl(url string) bool {
 	var accounts []Account
 	isDeleted := false
 	for _, account := range vault.Accounts {
@@ -47,7 +69,7 @@ func (vault *Vault) DeleteAccountByUrl(url string) bool {
 	return isDeleted
 }
 
-func (vault *Vault) FindAccountByUrl(url string) []Account {
+func (vault *VaultWithDb) FindAccountByUrl(url string) []Account {
 	var accounts []Account
 	for _, account := range vault.Accounts {
 		isMatched := strings.Contains(account.Url, url)
@@ -58,7 +80,7 @@ func (vault *Vault) FindAccountByUrl(url string) []Account {
 	return accounts
 }
 
-func (vault *Vault) AddAccount(acc Account) {
+func (vault *VaultWithDb) AddAccount(acc Account) {
 	vault.Accounts = append(vault.Accounts, acc)
 	vault.save()
 }
@@ -71,11 +93,11 @@ func (vault *Vault) ToBytes() ([]byte, error) {
 	return file, nil
 }
 
-func (vault *Vault) save() {
+func (vault *VaultWithDb) save() {
 	vault.UpdatedAt = time.Now()
-	data, err := vault.ToBytes()
+	data, err := vault.Vault.ToBytes()
 	if err != nil {
 		color.Red("Не удалось преобразовать ")
 	}
-	files.WriteFile(data, "data.json")
+	vault.db.Write(data)
 }
