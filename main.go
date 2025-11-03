@@ -2,11 +2,13 @@ package main
 
 import (
 	"demo/password/account"
+	"demo/password/encrypter"
 	"demo/password/files"
 	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/joho/godotenv"
 )
 
 var menu = map[string]func(*account.VaultWithDb){
@@ -18,7 +20,11 @@ var menu = map[string]func(*account.VaultWithDb){
 
 func main() {
 	fmt.Println("Менеджер паролей")
-	vault := account.NewVault(files.NewJsonDb("data.json"))
+	err := godotenv.Load()
+	if err != nil {
+		color.Red("Не удалось найти env файл")
+	}
+	vault := account.NewVault(files.NewJsonDb("data.vault"), *encrypter.NewEncryter())
 Menu:
 	for {
 		variant := promptData([]string{
