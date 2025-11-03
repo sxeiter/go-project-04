@@ -37,6 +37,6 @@ func (db *JsonDb) Write(content []byte) {
 		color.Red(err.Error())
 		return
 	}
-	fmt.Println("Запись успешна")
+	color.Green("Запись успешна")
 	file.Close()
 }
